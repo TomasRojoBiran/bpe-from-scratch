@@ -16,8 +16,12 @@ def get_stats(ids, counts=None):
     Example: [1, 2, 3, 1, 2] -> {(1, 2): 2, (2, 3): 1, (3, 1): 1}
     Optionally allows to update an existing dictionary of counts
     """
-    pass
+    if counts is None:
+        counts = {}
+    for pair in zip(ids, ids[1:]):
+        counts[pair] = counts.get(pair, 0) + 1
 
+    return counts
 
 def merge(ids, pair, idx):
     """
@@ -25,7 +29,17 @@ def merge(ids, pair, idx):
     of pair with the new integer token idx
     Example: ids=[1, 2, 3, 1, 2], pair=(1, 2), idx=4 -> [4, 3, 4]
     """
-    pass
+    newids = []
+    i = 0
+    while i < len(ids):
+        if i < len(ids) - 1 and (ids[i], ids[i+1]) == pair:
+            newids.append(idx)
+            i += 2
+        else:
+            newids.append(ids[i])
+            i += 1
+
+    return newids
 
 # first two helper functions...
 def replace_control_characters(s: str) -> str:
