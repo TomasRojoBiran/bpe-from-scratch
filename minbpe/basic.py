@@ -35,7 +35,18 @@ class BasicTokenizer(Tokenizer):
         self.vocab = self._build_vocab()
 
     def decode(self, ids):
-        raise NotImplementedError
+        text = b''
+        for i in ids:
+            text = text + self.vocab[i]
+        text = text.decode('utf-8', errors= 'replace')
+        return text
 
     def encode(self, text):
-        raise NotImplementedError
+        ids = list(text.encode('utf-8'))
+        while len(ids) >= 2:
+            stats = get_stats(ids)
+            pair = min(stats, key=lambda p: self.merges.get(p, float('inf')))
+            if pair not in self.merges:
+                break
+            ids = merge(ids, pair, self.merges[pair])
+        return ids
