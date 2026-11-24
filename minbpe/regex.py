@@ -56,14 +56,30 @@ class RegexTokenizer(Tokenizer):
 
     def decode(self, ids):
         # Reuse the existing decoding logic and then in step 4 adapt it for special tokens
-        raise NotImplementedError
+        text = b''
+        for i in ids:
+            text = text + self.vocab[i]
+        return text.decode('utf-8', errors='replace')
 
     def _encode_chunk(self, text_bytes):
-        raise NotImplementedError
+        ids = list(text_bytes)
+        while len(ids) >= 2:
+            stats = get_stats(ids)
+            pair = min(stats, key=lambda p: self.merges.get(p, float('inf')))
+            if pair not in self.merges:
+                break
+            ids = merge(ids, pair, self.merges[pair])
+        return ids
 
     def encode_ordinary(self, text):
         """Encoding that ignores any special tokens."""
-        raise NotImplementedError
+        text = self.regex.findall(text)
+        text_bytes = [chunk.encode('utf-8') for chunk in text]
+        ids = []
+        for chunk in text_bytes:
+            encoded_chunk = self._encode_chunk(chunk)
+            ids.extend(encoded_chunk)
+        return ids
 
     def encode(self, text, allowed_special="none_raise"):
         """
@@ -73,5 +89,5 @@ class RegexTokenizer(Tokenizer):
         this is the default tiktoken behavior right now as well
         any other behavior is either annoying, or a major footgun
         """
-        # Reuse the existing decoding logic and then in step 4 adapt it for special tokens
-        raise NotImplementedError
+        # In step 4 adapt it for special tokens
+        return self.encode_ordinary(text)
