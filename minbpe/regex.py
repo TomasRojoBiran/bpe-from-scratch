@@ -27,10 +27,29 @@ class RegexTokenizer(Tokenizer):
         - special_tokens: str -> int dictionary of special tokens
           example: {'<|endoftext|>': 100257}
         """
-        raise NotImplementedError
+        super().__init__()
+        self.pattern = GPT4_SPLIT_PATTERN if pattern is None else pattern
+        self.regex = re.compile(self.pattern)
 
     def train(self, text, vocab_size, verbose=False):
-        raise NotImplementedError
+        if vocab_size < 256:
+            raise ValueError("vocab_size must be at least 256")
+        self.merges = {}
+        text = self.regex.findall(text)
+        ids = [list(chunk.encode('utf-8')) for chunk in text]
+        num_merges = vocab_size - 256
+        for i in range(num_merges):
+            stats = {}
+            for chunk in ids:
+                stats = get_stats(chunk, counts=stats)
+            if not stats:
+                break
+            pair = max(stats, key=lambda p: stats[p])
+            ids = [merge(chunk, pair, i + 256) for chunk in ids]
+            self.merges[pair] = i + 256
+            if verbose:
+                print(f"Iteration: {i+1} | Selected Pair: {pair}, frequency: {stats[pair]} | IDX: {i+256}")
+        self.vocab = self._build_vocab()
 
     def register_special_tokens(self, special_tokens):
         raise NotImplementedError
