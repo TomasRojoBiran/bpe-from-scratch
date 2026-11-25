@@ -58,13 +58,20 @@ class GPT4Tokenizer(RegexTokenizer):
     """Lightweight wrapper on RegexTokenizer that matches GPT-4's tokenizer."""
 
     def __init__(self):
-        raise NotImplementedError
+        super().__init__()
+        pretrained_tokenizer = tiktoken.get_encoding('cl100k_base')
+        mergeable_ranks = pretrained_tokenizer._mergeable_ranks # bytes -> int
+        self.merges= recover_merges(mergeable_ranks) # (int, int) -> int
+        self.byte_shuffle = {k[0]: v for k,v in mergeable_ranks.items() if len(k) == 1} # byte_value -> token_id
+        self.inv_byte_shuffle = {v: k for k,v in self.byte_shuffle.items()} # token_id -> byte_value
+        self.vocab = {v: k for k,v in mergeable_ranks.items()} # int -> bytes
 
     def _encode_chunk(self, text_bytes):
-        raise NotImplementedError
+        shuffled_ids = [self.byte_shuffle[b] for b in text_bytes]
+        return super()._encode_chunk(shuffled_ids)
 
     def decode(self, ids):
-        raise NotImplementedError
+        return super().decode(ids)
 
     # this is a pretrained tokenizer, it is not intended to be trained
     def train(self, text, vocab_size, verbose=False):
