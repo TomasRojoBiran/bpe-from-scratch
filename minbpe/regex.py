@@ -51,14 +51,13 @@ class RegexTokenizer(Tokenizer):
                 print(f"Iteration: {i+1} | Selected Pair: {pair}, frequency: {stats[pair]} | IDX: {i+256}")
         self.vocab = self._build_vocab()
 
-    def register_special_tokens(self, special_tokens):
-        raise NotImplementedError
-
     def decode(self, ids):
-        # Reuse the existing decoding logic and then in step 4 adapt it for special tokens
         text = b''
         for i in ids:
-            text = text + self.vocab[i]
+            if i in self.inv_special_tokens:
+                text = text + self.inv_special_tokens[i].encode('utf-8')
+            else:
+                text = text + self.vocab[i]
         return text.decode('utf-8', errors='replace')
 
     def _encode_chunk(self, text_bytes):
@@ -89,5 +88,32 @@ class RegexTokenizer(Tokenizer):
         this is the default tiktoken behavior right now as well
         any other behavior is either annoying, or a major footgun
         """
-        # In step 4 adapt it for special tokens
-        return self.encode_ordinary(text)
+        if allowed_special == "all":
+            special = self.special_tokens
+        elif allowed_special == "none":
+            special = {}
+        elif allowed_special == "none_raise":
+            if any(k in text for k in self.special_tokens):
+                raise ValueError("Special tokens encountered in text")
+            special = {}
+        elif isinstance(allowed_special, set):
+            special = {k: self.special_tokens[k] for k in self.special_tokens if k in allowed_special}
+        else:
+            raise ValueError("Invalid allowed_special argument")
+
+        if not special:
+            return self.encode_ordinary(text)
+
+        special_pattern = '(' + '|'.join([re.escape(k) for k in special]) + ')'
+        text = re.split(special_pattern, text)
+        ids = []
+        for chunk in text:
+            if chunk in special:
+                ids.append(special[chunk])
+            else:
+                ids.extend(self.encode_ordinary(chunk))
+        return ids
+
+    def load(self, model_file):
+        super().load(model_file)
+        self.regex = re.compile(self.pattern)

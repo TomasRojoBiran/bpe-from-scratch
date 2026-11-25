@@ -73,6 +73,7 @@ class Tokenizer:
         self.pattern = "" # str
         self.special_tokens = {} # str -> int, e.g. {'<|endoftext|>': 100257}
         self.vocab = self._build_vocab() # int -> bytes
+        self.inv_special_tokens = {} # int -> str
 
     def train(self, text, vocab_size, verbose=False):
         # Tokenizer can train a vocabulary of size vocab_size from text
@@ -94,6 +95,10 @@ class Tokenizer:
         for (p0, p1), idx in self.merges.items():
             vocab[idx] = vocab[p0] + vocab[p1]
         return vocab
+
+    def register_special_tokens(self, special_tokens):
+        self.special_tokens = special_tokens
+        self.inv_special_tokens = {v: k for k,v in self.special_tokens.items()}
 
     def save(self, file_prefix):
         """
@@ -162,5 +167,5 @@ class Tokenizer:
                 merges[(idx1, idx2)] = idx
                 idx += 1
         self.merges = merges
-        self.special_tokens = special_tokens
+        self.register_special_tokens(special_tokens)
         self.vocab = self._build_vocab()

@@ -65,6 +65,7 @@ class GPT4Tokenizer(RegexTokenizer):
         self.byte_shuffle = {k[0]: v for k,v in mergeable_ranks.items() if len(k) == 1} # byte_value -> token_id
         self.inv_byte_shuffle = {v: k for k,v in self.byte_shuffle.items()} # token_id -> byte_value
         self.vocab = {v: k for k,v in mergeable_ranks.items()} # int -> bytes
+        self.register_special_tokens(GPT4_SPECIAL_TOKENS)
 
     def _encode_chunk(self, text_bytes):
         shuffled_ids = [self.byte_shuffle[b] for b in text_bytes]
